@@ -1,4 +1,7 @@
-FROM rust:1.84.0-slim-bookworm as builder
+ARG TARGETARCH
+FROM --platform=linux/${TARGETARCH} rust:1.84.0-slim-bookworm as builder
+
+ARG TARGETARCH
 
 WORKDIR /app
 RUN apt-get update && \
@@ -16,7 +19,7 @@ RUN case "$TARGETARCH" in \
     cp target/release/cursor-api /app/cursor-api
 
 # 运行阶段
-FROM debian:bookworm-slim
+FROM --platform=linux/${TARGETARCH} debian:bookworm-slim
 
 WORKDIR /app
 ENV TZ=Asia/Shanghai
