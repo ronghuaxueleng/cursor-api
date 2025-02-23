@@ -42,6 +42,91 @@ token2,checksum2
 * 需要删除某个 token
 * 需要使用已有 checksum 来对应某一个 token
 
+## 部署
+
+### 本地部署
+
+#### 从源码编译
+
+需要安装 Rust 工具链和 protobuf 编译器：
+
+```bash
+# 安装依赖（Debian/Ubuntu）
+apt-get install -y build-essential protobuf-compiler
+
+# 编译并运行
+cargo build --release
+./target/release/cursor-api
+```
+
+#### 使用预编译二进制
+
+从 [Releases](https://github.com/wisdgod/cursor-api/releases) 下载对应平台的二进制文件。
+
+### Docker 部署
+
+#### Docker 运行示例
+
+```bash
+docker run -d -e PORT=3000 -e AUTH_TOKEN=your_token -p 3000:3000 wisdgod/cursor-api:latest
+```
+
+#### Docker 构建示例
+
+```bash
+docker build -t cursor-api .
+docker run -p 3000:3000 cursor-api
+```
+
+### huggingface部署
+
+1. duplicate项目:
+   [huggingface链接](https://huggingface.co/login?next=%2Fspaces%2Fronghua%2Fcursor%3Fduplicate%3Dtrue)
+
+2. 配置环境变量
+
+   在你的space中，点击settings，找到`Variables and secrets`，添加Variables
+   - name: `AUTH_TOKEN` （注意大写）
+   - value: 你随意
+
+3. 重新部署
+   
+   点击`Factory rebuild`，等待部署完成
+
+4. 接口地址（`Embed this Space`中查看）：
+   ```
+   https://{username}-{space-name}.hf.space/v1/models
+   ```
+
+## 注意事项
+
+1. 请妥善保管您的 AuthToken，不要泄露给他人
+2. 配置 AUTH_TOKEN 环境变量以增加安全性
+3. 本项目仅供学习研究使用，请遵守 Cursor 的使用条款
+
+## 开发
+
+### 跨平台编译
+
+使用提供的构建脚本：
+
+```bash
+# 仅编译当前平台
+./scripts/build.sh
+
+# 交叉编译所有支持的平台
+./scripts/build.sh --cross
+```
+
+支持的目标平台：
+- x86_64-unknown-linux-gnu
+- x86_64-pc-windows-msvc
+- aarch64-unknown-linux-gnu
+- x86_64-apple-darwin
+- aarch64-apple-darwin
+
+
+
 ### 模型列表
 
 写死了，后续也不会会支持自定义模型列表
@@ -570,70 +655,6 @@ string
 * 接口地址: `/logs`
 * 请求方法: POST
 * 认证方式: Bearer Token
-* 响应格式:
-
-```json
-{
-  "total": number,
-  "logs": [
-    {
-      "id": number,
-      "timestamp": "string",
-      "model": "string",
-      "token_info": {
-        "token": "string",
-        "checksum": "string",
-        "profile": {
-          "usage": {
-            "premium": {
-              "requests": number,
-              "requests_total": number,
-              "tokens": number,
-              "max_requests": number,
-              "max_tokens": number
-            },
-            "standard": {
-              "requests": number,
-              "requests_total": number,
-              "tokens": number,
-              "max_requests": number,
-              "max_tokens": number
-            },
-            "unknown": {
-              "requests": number,
-              "requests_total": number,
-              "tokens": number,
-              "max_requests": number,
-              "max_tokens": number
-            }
-          },
-          "user": {
-            "email": "string",
-            "name": "string",
-            "id": "string",
-            "updated_at": "string"
-          },
-          "stripe": {
-            "membership_type": "free" | "free_trial" | "pro" | "enterprise",
-            "payment_id": "string",
-            "days_remaining_on_trial": number
-          }
-        }
-      },
-      "prompt": "string",
-      "timing": {
-        "total": number,
-        "first": number
-      },
-      "stream": boolean,
-      "status": "string",
-      "error": "string"
-    }
-  ],
-  "timestamp": "string",
-  "status": "success"
-}
-```
 
 #### 获取用户信息
 
@@ -645,55 +666,6 @@ string
 ```json
 {
   "token": "string"
-}
-```
-
-* 响应格式:
-
-```json
-{
-  "usage": {
-    "premium": {
-      "requests": number,
-      "requests_total": number,
-      "tokens": number,
-      "max_requests": number,
-      "max_tokens": number
-    },
-    "standard": {
-      "requests": number,
-      "requests_total": number,
-      "tokens": number,
-      "max_requests": number,
-      "max_tokens": number
-    },
-    "unknown": {
-      "requests": number,
-      "requests_total": number,
-      "tokens": number,
-      "max_requests": number,
-      "max_tokens": number
-    }
-  },
-  "user": {
-    "email": "string",
-    "name": "string",
-    "id": "string",
-    "updated_at": "string"
-  },
-  "stripe": {
-    "membership_type": "free" | "free_trial" | "pro" | "enterprise",
-    "payment_id": "string",
-    "days_remaining_on_trial": number
-  }
-}
-```
-
-如果发生错误，响应格式为:
-
-```json
-{
-  "error": "string"
 }
 ```
 
@@ -741,33 +713,3 @@ string
 - [cursor-api](https://github.com/wisdgod/cursor-api) - 本项目本身
 - [zhx47/cursor-api](https://github.com/zhx47/cursor-api) - 提供了本项目起步阶段的主要参考
 - [luolazyandlazy/cursorToApi](https://github.com/luolazyandlazy/cursorToApi)
-
-### 偷偷写在最后的话
-
-虽然作者觉得~骗~收点钱合理，但不强求，要是**主动自愿**发我我肯定收（因为真有人这么做，虽然不是赞助），赞助很合理吧
-
-不是**主动自愿**就算了，不是很缺，给了会很感动罢了。
-
-虽然不是很建议你赞助，但如果你赞助了，大概可以：
-
-* 测试版更新
-* 要求功能
-* 问题更快解决
-
-即使如此，我也保留可以拒绝赞助和拒绝要求的权利。
-
-求赞助还是有点不要脸了，接下来是吐槽：
-
-辛辛苦苦做这个也不知道是为了谁，好累。其实还有很多功能可以做，比如直接传token支持配置（其实这个要专门做一个页面），这个作为rc.4的计划之一吧。
-
-主要没想做用户管理，所以不存在是否接入LinuxDo的问题。虽然那个半成品公益版做好了就是了。
-
-就说这么多，没啥可说的，不管那么多，做就完了。\[doge\] 自己想象吧。
-
-为什么一直说要跑路呢？主要是有时Cursor的Claude太假了，堪比gpt-4o-mini，我对比发现真没啥差别，比以前差远了，无力了，所以不太想做了。我也感觉很奇怪。
-
-查询额度会在一开始检测导致和完成时的额度有些差别，但是懒得改了，反正差别不大，对话也没响应内容，恰好完成了统一。
-
-有人说少个二维码来着，还是算了。如果觉得好用，给点支持。其实没啥大不了的，没兴趣就不做了。不想那么多了。
-
-要不给我邮箱发口令红包？休息休息
