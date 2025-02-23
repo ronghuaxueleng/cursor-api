@@ -3,6 +3,9 @@ FROM rust:1.83.0-slim-bookworm as builder
 
 WORKDIR /app
 
+# 设置为中国国内源
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+RUN sed -i 's/security.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
 # 安装构建依赖
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -29,6 +32,9 @@ WORKDIR /app
 
 ENV TZ=Asia/Shanghai
 
+# 设置为中国国内源
+RUN sed -i 's/deb.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
+RUN sed -i 's/security.debian.org/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
 # 安装运行时依赖
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
