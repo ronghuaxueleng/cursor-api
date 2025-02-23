@@ -31,6 +31,7 @@
 
 `.tokens` 文件：每行为token和checksum的对应关系：
     
+
 ```
 # 这里的#表示这行在下次读取要删除
 token1,checksum1
@@ -52,7 +53,8 @@ token2,checksum2
 
 ```bash
 # 安装依赖（Debian/Ubuntu）
-apt-get install -y build-essential protobuf-compiler
+apt-get install aptitude
+aptitude install -y build-essential protobuf-compiler cargo
 
 # 编译并运行
 cargo build --release
