@@ -2,9 +2,20 @@ name: Docker Build and Push
 
 on:
   workflow_dispatch:
-  # push:
-  #   tags:
-  #     - 'v*'
+    inputs:
+      update_latest:
+        description: '是否更新 latest 标签'
+        required: true
+        type: boolean
+        default: false
+      upload_artifacts:
+        description: '是否上传构建产物'
+        required: true
+        type: boolean
+        default: true
+  push:
+    tags:
+      - 'v*'
 
 env:
   IMAGE_NAME: ${{ github.repository_owner }}/cursor-api
@@ -36,21 +47,55 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
+            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' && inputs.update_latest }}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
             type=raw,value=${{ steps.cargo_version.outputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
-            type=ref,event=tag,enable=${{ github.event_name == 'push' }}
+            type=raw,value=${{ github.ref_name }},enable=${{ github.event_name == 'push' }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3.8.0
         with:
           driver-opts: |
             image=moby/buildkit:latest
+            network=host
+
+      -
+        name: Available platforms
+        run: echo ${{ steps.buildx.outputs.platforms }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6.10.0
+        uses: docker/build-push-action@v6.11.0
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
+
           push: true
+          platform: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=local,dest=./dist,enable=${{ (github.event_name == 'workflow_dispatch' && inputs.upload_artifacts) || github.event_name == 'push'}}
+
+      - name: Prepare artifacts
+        if: github.event_name == 'workflow_dispatch' && inputs.upload_artifacts
+        run: |
+          mkdir -p artifacts
+          cp dist/linux_amd64/app/cursor-api artifacts/cursor-api-x86_64-${{ steps.cargo_version.outputs.version }}
+          cp dist/linux_arm64/app/cursor-api artifacts/cursor-api-aarch64-${{ steps.cargo_version.outputs.version }}
+
+      - name: Prepare artifacts
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p artifacts
+          cp dist/linux_amd64/app/cursor-api artifacts/cursor-api-x86_64-${{ github.ref_name }}
+          cp dist/linux_arm64/app/cursor-api artifacts/cursor-api-aarch64-${{ github.ref_name }}
+
+      - name: Upload artifacts
+        if: (github.event_name == 'workflow_dispatch' && inputs.upload_artifacts) || github.event_name == 'push'
+        uses: actions/upload-artifact@v4.6.0
+        with:
+          name: cursor-api-binaries
+          path: artifacts/
+          retention-days: 7

@@ -6,11 +6,6 @@ info() { echo -e "\033[1;34m[INFO]\033[0m $*"; }
 warn() { echo -e "\033[1;33m[WARN]\033[0m $*"; }
 error() { echo -e "\033[1;31m[ERROR]\033[0m $*" >&2; exit 1; }
 
-# 检查是否在 Linux 环境
-is_linux() {
-    [ "$(uname -s)" = "Linux" ]
-}
-
 # 检查必要的工具
 check_requirements() {
     local missing_tools=()
@@ -22,15 +17,22 @@ check_requirements() {
         fi
     done
 
-    # Linux 特定检查
-    if [[ $USE_CROSS == true ]] && ! command -v cross &>/dev/null; then
-        missing_tools+=("cross")
-    fi
-
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         error "缺少必要工具: ${missing_tools[*]}"
     fi
 }
+
+# 解析参数
+USE_STATIC=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --static) USE_STATIC=true ;;
+        --help) show_help; exit 0 ;;
+        *) error "未知参数: $1" ;;
+    esac
+    shift
+done
 
 # 帮助信息
 show_help() {
@@ -38,7 +40,6 @@ show_help() {
 用法: $(basename "$0") [选项]
 
 选项:
-  --cross         使用 cross 进行交叉编译（仅在 Linux 上有效）
   --static        使用静态链接（默认动态链接）
   --help          显示此帮助信息
 
@@ -57,42 +58,37 @@ build_target() {
     # 确定文件后缀
     [[ $target == *"windows"* ]] && extension=".exe"
 
-    # 设置目标特定的环境变量
-    local build_env=()
-    if [[ $target == "aarch64-unknown-linux-gnu" ]]; then
-        build_env+=(
-            "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc"
-            "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++"
-            "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc"
-            "PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig"
-            "PKG_CONFIG_ALLOW_CROSS=1"
-            "OPENSSL_DIR=/usr"
-            "OPENSSL_INCLUDE_DIR=/usr/include"
-            "OPENSSL_LIB_DIR=/usr/lib/aarch64-linux-gnu"
-        )
-    fi
-
-    # 判断是否使用 cross（仅在 Linux 上）
+    # 构建
     if [[ $target != "$CURRENT_TARGET" ]]; then
-        env ${build_env[@]+"${build_env[@]}"} RUSTFLAGS="$rustflags" cargo build --target "$target" --release
+        env RUSTFLAGS="$rustflags" cargo build --target "$target" --release
     else
-        env ${build_env[@]+"${build_env[@]}"} RUSTFLAGS="$rustflags" cargo build --release
+        env RUSTFLAGS="$rustflags" cargo build --release
     fi
 
     # 移动编译产物到 release 目录
     local binary_name="cursor-api"
     [[ $USE_STATIC == true ]] && binary_name+="-static"
 
-    if [[ -f "target/$target/release/cursor-api$extension" ]]; then
-        cp "target/$target/release/cursor-api$extension" "release/${binary_name}-$target$extension"
+    local binary_path
+    if [[ $target == "$CURRENT_TARGET" ]]; then
+        binary_path="target/release/cursor-api$extension"
+    else
+        binary_path="target/$target/release/cursor-api$extension"
+    fi
+
+    if [[ -f "$binary_path" ]]; then
+        cp "$binary_path" "release/${binary_name}-$target$extension"
         info "完成构建 $target"
     else
         warn "构建产物未找到: $target"
+        warn "查找路径: $binary_path"
+        warn "当前目录内容:"
+        ls -R target/
         return 1
     fi
 }
 
-# 获取 CPU 架构
+# 获取 CPU 架构和操作系统
 ARCH=$(uname -m | sed 's/^aarch64\|arm64$/aarch64/;s/^x86_64\|x86-64\|x64\|amd64$/x86_64/')
 OS=$(uname -s)
 
@@ -102,9 +98,15 @@ get_target() {
     local os=$2
     case "$os" in
         "Darwin") echo "${arch}-apple-darwin" ;;
-        "Linux") echo "${arch}-unknown-linux-gnu" ;;
+        "Linux") 
+            if [[ $USE_STATIC == true ]]; then
+                echo "${arch}-unknown-linux-musl"
+            else
+                echo "${arch}-unknown-linux-gnu"
+            fi
+            ;;
         "MINGW"*|"MSYS"*|"CYGWIN"*|"Windows_NT") echo "${arch}-pc-windows-msvc" ;;
-        "FreeBSD") echo "x86_64-unknown-freebsd" ;;
+        "FreeBSD") echo "${arch}-unknown-freebsd" ;;
         *) error "不支持的系统: $os" ;;
     esac
 }
@@ -118,52 +120,52 @@ CURRENT_TARGET=$(get_target "$ARCH" "$OS")
 # 获取系统对应的所有目标
 get_targets() {
     case "$1" in
-        "linux") echo "x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu" ;;
-        "windows") echo "x86_64-pc-windows-msvc aarch64-pc-windows-msvc" ;;
-        "macos") echo "x86_64-apple-darwin aarch64-apple-darwin" ;;
-        "freebsd") echo "x86_64-unknown-freebsd" ;;
+        "linux")
+            # Linux 只构建当前架构
+            echo "$CURRENT_TARGET"
+            ;;
+        "freebsd")
+            # FreeBSD 只构建当前架构
+            echo "$CURRENT_TARGET"
+            ;;
+        "windows")
+            # Windows 只构建当前架构
+            echo "$CURRENT_TARGET"
+            ;;
+        "macos")
+            # macOS 构建所有 macOS 目标
+            echo "x86_64-apple-darwin aarch64-apple-darwin"
+            ;;
         *) error "不支持的系统组: $1" ;;
     esac
 }
-
-# 解析参数
-USE_CROSS=false
-USE_STATIC=false
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --cross) USE_CROSS=true ;;
-        --static) USE_STATIC=true ;;
-        --help) show_help; exit 0 ;;
-        *) error "未知参数: $1" ;;
-    esac
-    shift
-done
 
 # 检查依赖
 check_requirements
 
 # 确定要构建的目标
-if [[ $USE_CROSS == true ]] && is_linux; then
-    # 只在 Linux 上使用 cross 进行多架构构建
-    TARGETS=($(get_targets "linux"))
-else
-    # 其他系统或不使用 cross 时只构建当前系统的所有架构
-    case "$OS" in
-        "Darwin") TARGETS=($(get_targets "macos")) ;;
-        "Linux") TARGETS=("$CURRENT_TARGET") ;;
-        "MINGW"*|"MSYS"*|"CYGWIN"*|"Windows_NT") TARGETS=($(get_targets "windows")) ;;
-        "FreeBSD") TARGETS=("$CURRENT_TARGET") ;;
-        *) error "不支持的系统: $OS" ;;
-    esac
-fi
+case "$OS" in
+    Darwin) 
+        TARGETS=($(get_targets "macos"))
+        ;;
+    Linux)
+        TARGETS=($(get_targets "linux"))
+        ;;
+    FreeBSD)
+        TARGETS=($(get_targets "freebsd"))
+        ;;
+    MINGW*|MSYS*|CYGWIN*|Windows_NT)
+        TARGETS=($(get_targets "windows"))
+        ;;
+    *) error "不支持的系统: $OS" ;;
+esac
 
 # 创建 release 目录
 mkdir -p release
 
 # 设置静态链接标志
-RUSTFLAGS=""
-[[ $USE_STATIC == true ]] && RUSTFLAGS="-C target-feature=+crt-static"
+RUSTFLAGS="-C link-arg=-s"
+[[ $USE_STATIC == true ]] && RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-s"
 
 # 并行构建所有目标
 info "开始构建..."
