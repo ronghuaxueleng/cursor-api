@@ -18,7 +18,9 @@ RUN apt-get update && \
 COPY . .
 
 # 构建
-RUN rustup target add x86_64-unknown-linux-gnu && \
+RUN rustup install nightly && \
+    rustup default nightly && \
+    rustup target add x86_64-unknown-linux-gnu && \
     cargo build --target x86_64-unknown-linux-gnu --release && \
     cp target/x86_64-unknown-linux-gnu/release/cursor-api /app/cursor-api
 
