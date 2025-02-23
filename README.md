@@ -54,10 +54,10 @@ token2,checksum2
 ```bash
 # 安装依赖（Debian/Ubuntu）
 apt-get install aptitude
-aptitude install -y build-essential protobuf-compiler cargo
+aptitude install -y build-essential protobuf-compiler pkg-config libssl-dev cargo
 
 # 编译并运行
-cargo build --release
+cargo clean && cargo build --release
 ./target/release/cursor-api
 ```
 
