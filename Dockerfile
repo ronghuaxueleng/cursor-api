@@ -1,7 +1,10 @@
 ARG TARGETARCH
 FROM --platform=linux/${TARGETARCH} rust:1.84.0-slim-bookworm as builder
 
+ARG TARGETPLATFORM
 ARG TARGETARCH
+ARG BUILDARCH
+RUN echo $TARGETPLATFORM $TARGETARCH $BUILDARCH
 
 WORKDIR /app
 RUN apt-get update && \
