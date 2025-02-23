@@ -68,7 +68,7 @@ cargo build --release
 #### Docker 运行示例
 
 ```bash
-docker run -d -e PORT=3000 -e AUTH_TOKEN=your_token -p 3000:3000 wisdgod/cursor-api:latest
+docker run -d -e PORT=3000 -e AUTH_TOKEN=your_token -p 3000:3000 crpi-cnazxqmg4avmg4fq.cn-beijing.personal.cr.aliyuncs.com/ronghuaxueleng/cursor-api:latest
 ```
 
 #### Docker 构建示例
