@@ -110,7 +110,7 @@ docker run -p 3000:3000 cursor-api
 ### huggingface部署
 
 1. duplicate项目:
-   [huggingface链接](https://huggingface.co/login?next=%2Fspaces%2Fstevenrk%2Fcursor%3Fduplicate%3Dtrue)
+   [huggingface链接](https://huggingface.co/login?next=%2Fspaces%2Fronghua%2Fcursor%3Fduplicate%3Dtrue)
 
 2. 配置环境变量
 
@@ -156,7 +156,7 @@ docker run -p 3000:3000 cursor-api
 
 ### 获取token
 
-- 使用 [get-token](https://github.com/wisdgod/cursor-api/tree/main/get-token) 获取读取当前设备token，仅支持windows与macos
+- 使用 [get-token](https://github.com/ronghuaxueleng/cursor-api/tree/main/get-token) 获取读取当前设备token，仅支持windows与macos
 
 ## 鸣谢
 
