@@ -18,16 +18,12 @@ RUN apt-get update && \
 COPY . .
 
 # 构建
-RUN rustup install nightly && \
-    rustup default nightly && \
-    rustup target add x86_64-unknown-linux-gnu && \
+RUN rustup target add x86_64-unknown-linux-gnu && \
     cargo build --target x86_64-unknown-linux-gnu --release && \
     cp target/x86_64-unknown-linux-gnu/release/cursor-api /app/cursor-api
 
 # 运行阶段
 FROM debian:bookworm-slim
-
-WORKDIR /app
 
 ENV TZ=Asia/Shanghai
 
@@ -38,11 +34,19 @@ RUN apt-get update && \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+	PATH=/home/user/.local/bin:$PATH
+
+WORKDIR $HOME/app
+
 # 复制构建产物
-COPY --from=builder /app/cursor-api .
+COPY --from=builder --chown=user /app/cursor-api $HOME/app
 
 # 设置默认端口
 ENV PORT=3000
+ENV TOKEN_LIST_FILE=$HOME/app/.tokens
 
 # 动态暴露端口
 EXPOSE ${PORT}
