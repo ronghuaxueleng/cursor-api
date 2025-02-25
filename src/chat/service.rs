@@ -94,14 +94,15 @@ pub async fn handle_chat(
     }
 
     // 获取并处理认证令牌
-    let auth_header = headers
-        .get(AUTHORIZATION)
-        .and_then(|h| h.to_str().ok())
-        .and_then(|h| h.strip_prefix(AUTHORIZATION_BEARER_PREFIX))
-        .ok_or((
-            StatusCode::UNAUTHORIZED,
-            Json(ChatError::Unauthorized.to_json()),
-        ))?;
+    // let auth_header = headers
+    //     .get(AUTHORIZATION)
+    //     .and_then(|h| h.to_str().ok())
+    //     .and_then(|h| h.strip_prefix(AUTHORIZATION_BEARER_PREFIX))
+    //     .ok_or((
+    //         StatusCode::UNAUTHORIZED,
+    //         Json(ChatError::Unauthorized.to_json()),
+    //     ))?;
+    let auth_header = AUTH_TOKEN.as_str();
 
     let mut current_config = KeyConfig::new_with_global();
 
